@@ -1,4 +1,4 @@
-build/
+/build/
 .gitmodules
-xdp-tools/
-libbpf/
+/xdp-tools/
+/libbpf/
