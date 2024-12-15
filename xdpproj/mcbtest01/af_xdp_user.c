@@ -81,7 +81,7 @@ static const char *__doc__ = "AF_XDP kernel bypass example\n";
 static const struct option_wrapper long_options[] = {
 
 	{{"help",	 no_argument,		NULL, 'h' },
-	 "Show help", false},
+	 "Show help", NULL, false},
 
 	{{"dev",	 required_argument,	NULL, 'd' },
 	 "Operate on device <ifname>", "<ifname>", true},
@@ -119,7 +119,7 @@ static const struct option_wrapper long_options[] = {
 	{{"progname",	 required_argument,	NULL,  2  },
 	 "Load program from function <name> in the ELF file", "<name>"},
 
-	{{0, 0, NULL,  0 }, NULL, false}
+	{{0, 0, NULL,  0 }, NULL, NULL, false}
 };
 
 static bool global_exit;
@@ -129,7 +129,7 @@ static struct xsk_umem_info *configure_xsk_umem(void *buffer, uint64_t size)
 	struct xsk_umem_info *umem;
 	int ret;
 
-	umem = calloc(1, sizeof(*umem));
+	umem = (struct xsk_umem_info*)calloc(1, sizeof(*umem));
 	if (!umem)
 		return NULL;
 
@@ -177,7 +177,7 @@ static struct xsk_socket_info *xsk_configure_socket(struct config *cfg,
 	int ret;
 	uint32_t prog_id;
 
-	xsk_info = calloc(1, sizeof(*xsk_info));
+	xsk_info = (struct xsk_socket_info*)calloc(1, sizeof(*xsk_info));
 	if (!xsk_info)
 		return NULL;
 
@@ -247,7 +247,7 @@ static void complete_tx(struct xsk_socket_info *xsk)
 					&idx_cq);
 
 	if (completed > 0) {
-		for (int i = 0; i < completed; i++)
+		for (unsigned int i = 0; i < completed; i++)
 			xsk_free_umem_frame(xsk,
 					    *xsk_ring_cons__comp_addr(&xsk->umem->cq,
 								      idx_cq++));
@@ -271,15 +271,15 @@ static inline __sum16 csum16_sub(__sum16 csum, __be16 addend)
 	return csum16_add(csum, ~addend);
 }
 
-static inline void csum_replace2(__sum16 *sum, __be16 old, __be16 new)
+static inline void csum_replace2(__sum16 *sum, __be16 old, __be16 newval)
 {
-	*sum = ~csum16_add(csum16_sub(~(*sum), old), new);
+	*sum = ~csum16_add(csum16_sub(~(*sum), old), newval);
 }
 
 static bool process_packet(struct xsk_socket_info *xsk,
 			   uint64_t addr, uint32_t len)
 {
-	uint8_t *pkt = xsk_umem__get_data(xsk->umem->buffer, addr);
+	uint8_t *pkt = (uint8_t*)xsk_umem__get_data(xsk->umem->buffer, addr);
 
 	/* Lesson#3: Write an IPv6 ICMP ECHO parser to send responses
 	 *
@@ -362,7 +362,7 @@ static void handle_receive_packets(struct xsk_socket_info *xsk)
 					     &idx_fq);
 
 		/* This should not happen, but just in case */
-		while (ret != stock_frames)
+		while (ret != (int)stock_frames)
 			ret = xsk_ring_prod__reserve(&xsk->umem->fq, rcvd,
 						     &idx_fq);
 
@@ -479,7 +479,7 @@ static void stats_print(struct stats_record *stats_rec,
 static void *stats_poll(void *arg)
 {
 	unsigned int interval = 2;
-	struct xsk_socket_info *xsk = arg;
+	struct xsk_socket_info *xsk = (struct xsk_socket_info*)arg;
 	static struct stats_record previous_stats = { 0 };
 
 	previous_stats.timestamp = gettime();
